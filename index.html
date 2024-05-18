@@ -30,6 +30,9 @@
         position: mapOptions.center,
         map: map,
       });
+      var infoWindow = new naver.maps.InfoWindow({
+        anchorSkew: true,
+      });
 
       // 공원 데이터 로드
       fetch("park_list.json")
@@ -39,16 +42,25 @@
           parks.forEach((park) => {
             if (park.위도 && park.경도 && park.공원면적) {
               let radius = Math.sqrt(park.공원면적 / Math.PI); // 면적을 반지름으로 변환
+              let parkCenter = new naver.maps.LatLng(park.위도, park.경도);
 
-              new naver.maps.Circle({
+              let circle = new naver.maps.Circle({
                 map: map,
-                center: new naver.maps.LatLng(park.위도, park.경도),
+                center: parkCenter,
                 radius: radius,
                 fillColor: "#FF0000",
                 fillOpacity: 0.3,
                 strokeColor: "#FF0000",
                 strokeOpacity: 0.6,
                 strokeWeight: 2,
+              });
+
+              // 클릭 이벤트 추가
+              naver.maps.Event.addListener(circle, "click", function (e) {
+                infoWindow.setContent(
+                  `<div style="padding:10px;min-width:150px;text-align:center;">${park.공원명}</div>`
+                );
+                infoWindow.open(map, parkCenter);
               });
             }
           });
