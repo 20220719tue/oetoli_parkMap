@@ -11,7 +11,7 @@
     <style>
       #map {
         width: 100%;
-        height: 80vh; /* 지도의 높이를 화면의 80%로 설정 */
+        height: 600px; /* 지도의 높이를 조정합니다 */
       }
     </style>
   </head>
@@ -23,65 +23,112 @@
       // 네이버 지도 API 초기화
       var mapOptions = {
         center: new naver.maps.LatLng(37.5665, 126.978), // 기본 중심 위치 (서울)
-        zoom: 16, // 줌 레벨을 16으로 설정
+        zoom: 14,
       };
       var map = new naver.maps.Map("map", mapOptions);
       var marker = new naver.maps.Marker({
         position: mapOptions.center,
         map: map,
       });
-
-      // 사용자의 실시간 위치 추적
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
-          function (position) {
-            var lat = position.coords.latitude;
-            var lng = position.coords.longitude;
-            var userLocation = new naver.maps.LatLng(lat, lng);
-
-            // 지도 중심을 사용자의 현재 위치로 이동
-            map.setCenter(userLocation);
-            // 마커를 사용자의 현재 위치로 이동
-            marker.setPosition(userLocation);
-          },
-          function (error) {
-            console.error("Error occurred. Error code: " + error.code);
-          },
-          {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 5000,
-          }
-        );
-      } else {
-        alert("Geolocation is not supported by this browser.");
-      }
+      var infoWindow = new naver.maps.InfoWindow({
+        anchorSkew: true,
+      });
 
       // 공원 데이터 로드
-      naver.maps.onJSContentLoaded = function () {
-        fetch("park_list.json")
-          .then((response) => response.json())
-          .then((parks) => {
-            // 공원들 표시
-            parks.forEach((park) => {
-              if (park.위도 && park.경도 && park.공원면적) {
-                let radius = Math.sqrt(park.공원면적 / Math.PI); // 면적을 반지름으로 변환
+      fetch("park_list.json")
+        .then((response) => response.json())
+        .then((parks) => {
+          // 공원들 표시
+          parks.forEach((park) => {
+            if (park.위도 && park.경도 && park.공원면적) {
+              let radius = Math.sqrt(park.공원면적 / Math.PI); // 면적을 반지름으로 변환
+              let parkCenter = new naver.maps.LatLng(park.위도, park.경도);
 
-                new naver.maps.Circle({
-                  map: map,
-                  center: new naver.maps.LatLng(park.위도, park.경도),
-                  radius: radius,
-                  fillColor: "#FF0000",
-                  fillOpacity: 0.3,
-                  strokeColor: "#FF0000",
-                  strokeOpacity: 0.6,
-                  strokeWeight: 2,
+              let circle = new naver.maps.Circle({
+                map: map,
+                center: parkCenter,
+                radius: radius,
+                fillColor: "#FF0000",
+                fillOpacity: 0.3,
+                strokeColor: "#FF0000",
+                strokeOpacity: 0.6,
+                strokeWeight: 2,
+              });
+
+              // 클릭 이벤트 추가
+              naver.maps.Event.addListener(circle, "click", function (e) {
+                let content = `
+                                <div style="padding:10px;min-width:150px;">
+                                    <h4>${park.공원명}</h4>
+                                    <p>주소: ${
+                                      park.소재지지번주소 || "정보 없음"
+                                    }</p>
+                                    <p>면적: ${park.공원면적}㎡</p>
+                                    <p>관리 기관: ${park.관리기관명}</p>
+                                    <p>전화번호: ${
+                                      park.전화번호 || "정보 없음"
+                                    }</p>
+                                </div>`;
+                infoWindow.setContent(content);
+                infoWindow.open(map, circle);
+              });
+            }
+          });
+
+          // 사용자의 실시간 위치 추적
+          if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+              function (position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                var userLocation = new naver.maps.LatLng(lat, lng);
+
+                // 지도 중심을 사용자의 현재 위치로 이동
+                map.setCenter(userLocation);
+                // 마커를 사용자의 현재 위치로 이동
+                marker.setPosition(userLocation);
+
+                // 사용자가 공원 내에 있는지 확인
+                let isInPark = parks.some((park) => {
+                  if (park.위도 && park.경도 && park.공원면적) {
+                    let parkCenter = new naver.maps.LatLng(
+                      park.위도,
+                      park.경도
+                    );
+                    let distance =
+                      naver.maps.geometry.spherical.computeDistanceBetween(
+                        userLocation,
+                        parkCenter
+                      );
+                    let radius = Math.sqrt(park.공원면적 / Math.PI); // 면적을 반지름으로 변환
+                    return distance <= radius;
+                  }
+                  return false;
                 });
+
+                document.getElementById("status").textContent = isInPark
+                  ? "공원에 방문했습니다!"
+                  : "공원에 방문하지 않았습니다.";
+
+                // 결과를 React Native WebView에 전달
+                window.ReactNativeWebView.postMessage(
+                  isInPark ? "true" : "false"
+                );
+              },
+              function (error) {
+                console.error("Error occurred. Error code: " + error.code);
+              },
+              {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000,
               }
-            });
-          })
-          .catch((error) => console.error("Error loading park data:", error));
-      };
+            );
+          } else {
+            alert("Geolocation is not supported by this browser.");
+          }
+        })
+        .catch((error) => console.error("Error loading park data:", error));
     </script>
   </body>
 </html>
