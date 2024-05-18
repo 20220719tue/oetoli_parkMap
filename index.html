@@ -23,7 +23,7 @@
       // 네이버 지도 API 초기화
       var mapOptions = {
         center: new naver.maps.LatLng(37.5665, 126.978), // 기본 중심 위치 (서울)
-        zoom: 12,
+        zoom: 16,
       };
       var map = new naver.maps.Map("map", mapOptions);
       var marker = new naver.maps.Marker({
@@ -57,9 +57,19 @@
 
               // 클릭 이벤트 추가
               naver.maps.Event.addListener(circle, "click", function (e) {
-                infoWindow.setContent(
-                  `<div style="padding:10px;min-width:150px;text-align:center;">${park.공원명}</div>`
-                );
+                let content = `
+                                <div style="padding:10px;min-width:150px;">
+                                    <h4>${park.공원명}</h4>
+                                    <p>주소: ${
+                                      park.소재지지번주소 || "정보 없음"
+                                    }</p>
+                                    <p>면적: ${park.공원면적}㎡</p>
+                                    <p>관리 기관: ${park.관리기관명}</p>
+                                    <p>전화번호: ${
+                                      park.전화번호 || "정보 없음"
+                                    }</p>
+                                </div>`;
+                infoWindow.setContent(content);
                 infoWindow.open(map, parkCenter);
               });
             }
