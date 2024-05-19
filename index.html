@@ -16,11 +16,8 @@
     </style>
   </head>
   <body>
-    <!-- <p id="status">공원에 방문하지 않았습니다.</p> -->
     <div id="map"></div>
-
     <script>
-      // Haversine 공식을 사용하여 두 지점 사이의 거리를 계산하는 함수
       function haversineDistance(lat1, lon1, lat2, lon2) {
         function toRadians(degrees) {
           return degrees * (Math.PI / 180);
@@ -41,19 +38,16 @@
         return distance;
       }
 
-      // 공원의 면적을 반지름으로 변환하는 함수
       function calculateRadius(area) {
         return Math.sqrt(area / Math.PI);
       }
 
-      // 공원 내에 사용자가 있는지 확인하는 함수
       function isUserInPark(userLat, userLng, parkLat, parkLng, parkArea) {
         var parkRadius = calculateRadius(parkArea);
         var distance = haversineDistance(userLat, userLng, parkLat, parkLng);
         return distance <= parkRadius;
       }
 
-      // 네이버 지도 API 초기화
       var mapOptions = {
         center: new naver.maps.LatLng(37.5665, 126.978), // 기본 중심 위치 (서울)
         zoom: 15,
@@ -64,11 +58,9 @@
         map: map,
       });
 
-      // 공원 데이터 로드
       fetch("park_list.json")
         .then((response) => response.json())
         .then((parks) => {
-          // 공원들 표시
           parks.forEach((park) => {
             if (park._X && park._Y && park.area) {
               let radius = calculateRadius(park.area);
@@ -86,52 +78,25 @@
             }
           });
 
-          // 사용자의 실시간 위치 추적
-          if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-              function (position) {
-                var lat = position.coords.latitude;
-                var lng = position.coords.longitude;
-                var userLocation = new naver.maps.LatLng(lat, lng);
+          window.addEventListener("message", (event) => {
+            const data = JSON.parse(event.data);
+            const { latitude, longitude } = data;
 
-                // 지도 중심을 사용자의 현재 위치로 이동
-                map.setCenter(userLocation);
-                // 마커를 사용자의 현재 위치로 이동
-                marker.setPosition(userLocation);
-
-                // 사용자가 공원 내에 있는지 확인
-                let isInPark = parks.some((park) => {
-                  if (park._X && park._Y && park.area) {
-                    return isUserInPark(lat, lng, park._X, park._Y, park.area);
-                  }
-                  return false;
-                });
-
-                document.getElementById("status").textContent = isInPark
-                  ? "공원에 방문했습니다!"
-                  : "공원에 방문하지 않았습니다.";
-
-                // 결과를 React Native WebView에 전달
-                if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage(
-                    isInPark ? "true" : "false"
-                  );
-                } else {
-                  console.log("ReactNativeWebView is not defined.");
-                }
-              },
-              function (error) {
-                console.error("Error occurred. Error code: " + error.code);
-              },
-              {
-                enableHighAccuracy: true,
-                maximumAge: 0,
-                timeout: 5000,
+            let isInPark = parks.some((park) => {
+              if (park._X && park._Y && park.area) {
+                return isUserInPark(
+                  latitude,
+                  longitude,
+                  park._X,
+                  park._Y,
+                  park.area
+                );
               }
-            );
-          } else {
-            alert("Geolocation is not supported by this browser.");
-          }
+              return false;
+            });
+
+            window.ReactNativeWebView.postMessage(isInPark ? "true" : "false");
+          });
         })
         .catch((error) => console.error("Error loading park data:", error));
     </script>
