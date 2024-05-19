@@ -107,9 +107,13 @@
                   : "공원에 방문하지 않았습니다.";
 
                 // 결과를 React Native WebView에 전달
-                window.ReactNativeWebView.postMessage(
-                  isInPark ? "true" : "false"
-                );
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage(
+                    isInPark ? "true" : "false"
+                  );
+                } else {
+                  console.log("ReactNativeWebView is not defined.");
+                }
               },
               function (error) {
                 console.error("Error occurred. Error code: " + error.code);
