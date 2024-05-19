@@ -31,6 +31,26 @@
         map: map,
       });
 
+      // 두 지점 간의 거리를 계산하는 함수 (하버사인 공식 사용)
+      function computeDistanceBetween(lat1, lon1, lat2, lon2) {
+        function toRad(Value) {
+          return (Value * Math.PI) / 180;
+        }
+
+        var R = 6371; // 지구의 반경 (km)
+        var dLat = toRad(lat2 - lat1);
+        var dLon = toRad(lon2 - lon1);
+        var a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        var d = R * c; // Distance in km
+        return d;
+      }
+
       // 공원 데이터 로드
       fetch("park_list.json")
         .then((response) => response.json())
@@ -70,13 +90,14 @@
                 let isInPark = parks.some((park) => {
                   if (park._X && park._Y && park.area) {
                     let parkCenter = new naver.maps.LatLng(park._X, park._Y);
-                    let distance =
-                      naver.maps.geometry.spherical.computeDistanceBetween(
-                        userLocation,
-                        parkCenter
-                      );
+                    let distance = computeDistanceBetween(
+                      lat,
+                      lng,
+                      park._X,
+                      park._Y
+                    );
                     let radius = Math.sqrt(park.area / Math.PI); // 면적을 반지름으로 변환
-                    return distance <= radius;
+                    return distance <= radius / 1000; // 반지름을 km 단위로 변환
                   }
                   return false;
                 });
