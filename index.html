@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>공원 산책 인증</title>
+    <title>공원 산책</title>
     <script
       type="text/javascript"
       src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=0sq0mb7npe"
@@ -11,7 +11,7 @@
     <style>
       #map {
         width: 100%;
-        height: 80vh;
+        height: 90vh;
       }
     </style>
   </head>
@@ -20,6 +20,39 @@
     <div id="map"></div>
 
     <script>
+      // Haversine 공식을 사용하여 두 지점 사이의 거리를 계산하는 함수
+      function haversineDistance(lat1, lon1, lat2, lon2) {
+        function toRadians(degrees) {
+          return degrees * (Math.PI / 180);
+        }
+
+        var R = 6371e3; // 지구의 반경 (미터 단위)
+        var φ1 = toRadians(lat1);
+        var φ2 = toRadians(lat2);
+        var Δφ = toRadians(lat2 - lat1);
+        var Δλ = toRadians(lon2 - lon1);
+
+        var a =
+          Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+          Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        var distance = R * c; // 두 지점 사이의 거리 (미터 단위)
+        return distance;
+      }
+
+      // 공원의 면적을 반지름으로 변환하는 함수
+      function calculateRadius(area) {
+        return Math.sqrt(area / Math.PI);
+      }
+
+      // 공원 내에 사용자가 있는지 확인하는 함수
+      function isUserInPark(userLat, userLng, parkLat, parkLng, parkArea) {
+        var parkRadius = calculateRadius(parkArea);
+        var distance = haversineDistance(userLat, userLng, parkLat, parkLng);
+        return distance <= parkRadius;
+      }
+
       // 네이버 지도 API 초기화
       var mapOptions = {
         center: new naver.maps.LatLng(37.5665, 126.978), // 기본 중심 위치 (서울)
@@ -31,26 +64,6 @@
         map: map,
       });
 
-      // 두 지점 간의 거리를 계산하는 함수 (하버사인 공식 사용)
-      function computeDistanceBetween(lat1, lon1, lat2, lon2) {
-        function toRad(Value) {
-          return (Value * Math.PI) / 180;
-        }
-
-        var R = 6371; // 지구의 반경 (km)
-        var dLat = toRad(lat2 - lat1);
-        var dLon = toRad(lon2 - lon1);
-        var a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(toRad(lat1)) *
-            Math.cos(toRad(lat2)) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        var d = R * c; // Distance in km
-        return d;
-      }
-
       // 공원 데이터 로드
       fetch("park_list.json")
         .then((response) => response.json())
@@ -58,7 +71,7 @@
           // 공원들 표시
           parks.forEach((park) => {
             if (park._X && park._Y && park.area) {
-              let radius = Math.sqrt(park.area / Math.PI); // 면적을 반지름으로 변환
+              let radius = calculateRadius(park.area);
 
               new naver.maps.Circle({
                 map: map,
@@ -81,7 +94,6 @@
                 var lng = position.coords.longitude;
                 var userLocation = new naver.maps.LatLng(lat, lng);
 
-                console.log(lat, lng);
                 // 지도 중심을 사용자의 현재 위치로 이동
                 map.setCenter(userLocation);
                 // 마커를 사용자의 현재 위치로 이동
@@ -90,17 +102,7 @@
                 // 사용자가 공원 내에 있는지 확인
                 let isInPark = parks.some((park) => {
                   if (park._X && park._Y && park.area) {
-                    let parkCenter = new naver.maps.LatLng(park._X, park._Y);
-                    let distance = computeDistanceBetween(
-                      lat,
-                      lng,
-                      park._X,
-                      park._Y
-                    );
-                    let radius = Math.sqrt(park.area / Math.PI); // 면적을 반지름으로 변환
-                    console.log("distance: ", distance);
-                    console.log("radius: ", radius);
-                    return distance <= radius / 1000; // 반지름을 km 단위로 변환
+                    return isUserInPark(lat, lng, park._X, park._Y, park.area);
                   }
                   return false;
                 });
