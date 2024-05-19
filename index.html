@@ -9,14 +9,17 @@
       src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=0sq0mb7npe"
     ></script>
     <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
       #map {
         width: 100%;
-        height: 500px;
+        height: 90vh;
       }
     </style>
   </head>
   <body>
-    <h1>공원 산책 인증</h1>
     <div id="map"></div>
     <p id="status">공원에 방문하지 않았습니다.</p>
     <script>
