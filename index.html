@@ -81,6 +81,7 @@
                 var lng = position.coords.longitude;
                 var userLocation = new naver.maps.LatLng(lat, lng);
 
+                console.log(lat, lng);
                 // 지도 중심을 사용자의 현재 위치로 이동
                 map.setCenter(userLocation);
                 // 마커를 사용자의 현재 위치로 이동
@@ -97,6 +98,8 @@
                       park._Y
                     );
                     let radius = Math.sqrt(park.area / Math.PI); // 면적을 반지름으로 변환
+                    console.log("distance: ", distance);
+                    console.log("radius: ", radius);
                     return distance <= radius / 1000; // 반지름을 km 단위로 변환
                   }
                   return false;
