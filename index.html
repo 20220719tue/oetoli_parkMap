@@ -6,7 +6,7 @@
     <title>공원 산책</title>
     <script
       type="text/javascript"
-      src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=0sq0mb7npe"
+      src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId="
     ></script>
     <style>
       /* * {
@@ -46,7 +46,7 @@
 
               new naver.maps.Circle({
                 map: map,
-                center: new naver.maps.LatLng(park._X, park._Y),
+                center: new naver.maps.LatLng(park._Y, park._X), // 위도, 경도 순서
                 radius: radius,
                 fillColor: "#FF0000",
                 fillOpacity: 0.3,
@@ -73,12 +73,11 @@
                 // 사용자가 공원 내에 있는지 확인
                 let isInPark = parks.some((park) => {
                   if (park._X && park._Y && park.area) {
-                    let parkCenter = new naver.maps.LatLng(park._X, park._Y);
-                    let distance =
-                      naver.maps.geometry.spherical.computeDistanceBetween(
-                        userLocation,
-                        parkCenter
-                      );
+                    let parkCenter = new naver.maps.LatLng(park._Y, park._X); // 위도, 경도 순서
+                    let distance = naver.maps.GeometryUtils.getDistance(
+                      userLocation,
+                      parkCenter
+                    );
                     let radius = Math.sqrt(park.area / Math.PI); // 면적을 반지름으로 변환
                     return distance <= radius;
                   }
