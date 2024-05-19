@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -24,78 +24,80 @@
   <body>
     <div id="map"></div>
     <script>
-      // 사용자 위치 데이터를 받아와서 웹뷰로부터 전달받는 함수
-      window.addEventListener("message", (event) => {
-        const userLocation = event.data; // { latitude: number, longitude: number }
-        if (userLocation) {
-          fetchParksData(userLocation);
-        }
-      });
-
-      function fetchParksData(userLocation) {
-        fetch("park_list.json")
+      // JSON 파일에서 공원 데이터를 불러오기
+      function fetchParksData() {
+        return fetch("park_list.json")
           .then((response) => response.json())
-          .then((parks) => initMap(userLocation, parks))
           .catch((error) => console.error("Error loading park data:", error));
       }
 
-      function initMap(userLocation, parks) {
-        const map = new naver.maps.Map("map", {
-          center: new naver.maps.LatLng(
-            userLocation.latitude,
-            userLocation.longitude
-          ),
-          zoom: 16,
-        });
+      function initMap(parks) {
+        // 사용자의 현재 위치를 가져오기 위한 Geolocation API 사용
+        if (navigator.geolocation) {
+          navigator.geolocation.watchPosition(
+            (position) => {
+              const userLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              };
 
-        new naver.maps.Marker({
-          position: new naver.maps.LatLng(
-            userLocation.latitude,
-            userLocation.longitude
-          ),
-          map: map,
-          title: "Your Location",
-        });
+              const map = new naver.maps.Map("map", {
+                center: new naver.maps.LatLng(
+                  userLocation.latitude,
+                  userLocation.longitude
+                ),
+                zoom: 16,
+              });
 
-        parks.forEach((park) => {
-          const parkLatLng = new naver.maps.LatLng(park._X, park._Y);
-          const distance = getDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            park._X,
-            park._Y
-          );
+              // 사용자의 현재 위치를 지도에 표시
+              new naver.maps.Marker({
+                position: new naver.maps.LatLng(
+                  userLocation.latitude,
+                  userLocation.longitude
+                ),
+                map: map,
+                title: "Your Location",
+              });
 
-          // 근사치 반경 내에 있는 공원 찾기
-          if (distance <= Math.sqrt(park.area) * 1.5) {
-            new naver.maps.Marker({
-              position: parkLatLng,
-              map: map,
-              title: park.name,
-            });
+              // 공원 데이터를 지도에 표시
+              parks.forEach((park) => {
+                const parkLatLng = new naver.maps.LatLng(park._X, park._Y);
+                new naver.maps.Circle({
+                  map: map,
+                  center: parkLatLng,
+                  radius: Math.sqrt(park.area),
+                  strokeColor: "#5347AA",
+                  strokeOpacity: 0.8,
+                  strokeWeight: 2,
+                  fillColor: "#CFE7FF",
+                  fillOpacity: 0.6,
+                });
 
-            // 사용자가 공원 내에 있는지 확인
-            if (distance <= Math.sqrt(park.area)) {
-              alert(`인증완료: ${park.name}`);
+                new naver.maps.Marker({
+                  position: parkLatLng,
+                  map: map,
+                  title: park.name,
+                });
+              });
+            },
+            (error) => {
+              console.error("Error getting user location:", error);
+              alert("사용자의 위치를 가져올 수 없습니다.");
             }
+          );
+        } else {
+          alert("Geolocation을 지원하지 않는 브라우저입니다.");
+        }
+      }
+
+      // 페이지 로드 시 공원 데이터를 불러오고 지도 초기화
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchParksData().then((parks) => {
+          if (parks) {
+            initMap(parks);
           }
         });
-      }
-
-      function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; // metres
-        const φ1 = (lat1 * Math.PI) / 180;
-        const φ2 = (lat2 * Math.PI) / 180;
-        const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-        const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-        const a =
-          Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-          Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        return R * c; // in metres
-      }
+      });
     </script>
   </body>
 </html>
